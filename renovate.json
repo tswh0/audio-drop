@@ -5,6 +5,10 @@
   "labels": ["dependencies"],
   "packageRules": [
     {
+      "matchFileNames": ["docker-compose.yml"],
+      "pinDigests": false
+    },
+    {
       "matchPackageNames": ["yt-dlp"],
       "prPriority": 10
     }
