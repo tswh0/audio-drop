@@ -20,9 +20,18 @@ The published image listens on `127.0.0.1:8090`; the dev container on `127.0.0.1
 
 ## Formats
 
-Original (source codec, no re-encode), MP3, M4A, Opus.
+Default is MP3 at 320 kbps. Also available: M4A, Opus and Original (source codec, no re-encode).
 
 Opus stores tags as Vorbis comments on the audio stream, and its length comes from the last Ogg granule. Players that only read ID3/MP4 can show no tags and may estimate a longer duration from file size.
+
+## Options
+
+```sh
+LANGUAGE=en EXPERT_MODE=true docker compose up -d
+```
+
+- `LANGUAGE` — `de` (default) or `en`, switches the UI and server messages.
+- `EXPERT_MODE` — `true` shows the quality selector and lets you edit title, artist and album before download.
 
 ## Cookies
 

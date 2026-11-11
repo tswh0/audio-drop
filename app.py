@@ -28,6 +28,55 @@ MAX_JOBS = int(os.environ.get("MAX_JOBS", 20))
 JOB_TTL = 30 * 60
 COOKIES = os.environ.get("COOKIES_FILE", "")
 
+LANGUAGE = os.environ.get("LANGUAGE", "de").strip().lower()
+if LANGUAGE not in {"de", "en"}:
+    LANGUAGE = "de"
+EXPERT = os.environ.get("EXPERT_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+MESSAGES = {
+    "de": {
+        "bad_url": "Bitte einen YouTube-Link einfügen.",
+        "playlist": "Playlists werden nicht unterstützt, bitte einen einzelnen Videolink verwenden.",
+        "live": "Livestreams werden nicht unterstützt.",
+        "too_long": "Das Video ist länger als {hours} Stunden.",
+        "bad_format": "Bitte ein unterstütztes Format wählen.",
+        "bad_quality": "Bitte eine unterstützte Qualität wählen.",
+        "busy": "Gerade ausgelastet, bitte in einer Minute erneut versuchen.",
+        "failed": "Konvertierung fehlgeschlagen.",
+        "meta_required": "Titel und Künstler dürfen nicht leer sein.",
+        "meta_long": "Titel, Künstler und Album dürfen höchstens 200 Zeichen lang sein.",
+        "queued": "In der Warteschlange",
+        "reading": "Video wird gelesen",
+        "downloading": "Audio wird geladen",
+        "converting": "Wird konvertiert",
+        "tagging": "Tags werden geschrieben",
+        "ready": "Fertig",
+    },
+    "en": {
+        "bad_url": "Paste a YouTube video link.",
+        "playlist": "Playlists are not supported, use a single video link.",
+        "live": "Live streams are not supported.",
+        "too_long": "Video is longer than {hours} hours.",
+        "bad_format": "Pick a supported format.",
+        "bad_quality": "Pick a supported quality.",
+        "busy": "Busy right now, try again in a minute.",
+        "failed": "Conversion failed.",
+        "meta_required": "Title and artist must not be empty.",
+        "meta_long": "Title, artist and album must be 200 characters or less.",
+        "queued": "Queued",
+        "reading": "Reading video",
+        "downloading": "Downloading audio",
+        "converting": "Converting",
+        "tagging": "Writing tags",
+        "ready": "Ready",
+    },
+}
+
+
+def t(key, **kwargs):
+    return MESSAGES[LANGUAGE][key].format(**kwargs)
+
+
 ALLOWED_HOSTS = {
     "youtube.com",
     "www.youtube.com",
@@ -49,6 +98,7 @@ TITLE_NOISE = re.compile(
 )
 TITLE_SPLIT = re.compile(r"\s+[-\u2013\u2014]\s+")
 INVALID = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+TAG_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 jobs = {}
 jobs_lock = threading.Lock()
@@ -78,20 +128,25 @@ def clean_error(exc):
     text = re.sub(r"\x1b\[[0-9;]*m", "", str(exc)).strip()
     text = text.splitlines()[-1] if text else ""
     text = re.sub(r"^ERROR:\s*", "", text)
-    return (text or "Conversion failed.")[:300]
+    return (text or t("failed"))[:300]
+
+
+def clean_tag(value):
+    text = TAG_CONTROL.sub(" ", value or "")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def parse_url(raw):
     parsed = urlparse((raw or "").strip())
     host = (parsed.hostname or "").lower()
     if parsed.scheme not in {"http", "https"} or host not in ALLOWED_HOSTS:
-        raise ValueError("Paste a YouTube video link.")
+        raise ValueError(t("bad_url"))
 
     query = parse_qs(parsed.query)
     video_path = parsed.path.startswith(("/shorts/", "/live/", "/embed/"))
     short_link = host in {"youtu.be", "www.youtu.be"}
     if "list" in query and "v" not in query and not video_path and not short_link:
-        raise ValueError("Playlists are not supported, use a single video link.")
+        raise ValueError(t("playlist"))
 
     return parsed.geturl()
 
@@ -207,6 +262,8 @@ def write_tags(path, ext, title, artist, album, cover):
         audio["\xa9ART"] = [artist]
         if album:
             audio["\xa9alb"] = [album]
+        else:
+            audio.pop("\xa9alb", None)
         if cover:
             image_format = MP4Cover.FORMAT_PNG if cover[1] == "image/png" else MP4Cover.FORMAT_JPEG
             audio["covr"] = [MP4Cover(cover[0], imageformat=image_format)]
@@ -217,6 +274,8 @@ def write_tags(path, ext, title, artist, album, cover):
         audio["artist"] = [artist]
         if album:
             audio["album"] = [album]
+        else:
+            audio.pop("album", None)
         if cover:
             picture = Picture()
             picture.type = 3
@@ -259,17 +318,17 @@ def fetch(url, jid, tmp):
         options["cookiefile"] = COOKIES
 
     with yt_dlp.YoutubeDL(options) as ydl:
-        update(jid, phase="Reading video")
+        update(jid, phase=t("reading"))
         info = ydl.extract_info(url, download=False)
 
         if info.get("_type") == "playlist":
-            raise ValueError("Playlists are not supported, use a single video link.")
+            raise ValueError(t("playlist"))
         if info.get("is_live"):
-            raise ValueError("Live streams are not supported.")
+            raise ValueError(t("live"))
         if (info.get("duration") or 0) > MAX_DURATION:
-            raise ValueError(f"Video is longer than {MAX_DURATION // 3600} hours.")
+            raise ValueError(t("too_long", hours=MAX_DURATION // 3600))
 
-        update(jid, phase="Downloading audio", progress=0)
+        update(jid, phase=t("downloading"), progress=0)
         return ydl.process_ie_result(info, download=True)
 
 
@@ -283,27 +342,43 @@ def run_job(jid, url, fmt, quality):
             info = fetch(url, jid, tmp)
             source = info["requested_downloads"][0]["filepath"]
 
-            update(jid, phase="Converting", progress=75)
+            update(jid, phase=t("converting"), progress=75)
             target, ext = encode(source, fmt, quality, tmp)
 
-            update(jid, phase="Tagging", progress=90)
+            update(jid, phase=t("tagging"), progress=90)
             title, artist, album = metadata(info)
-            write_tags(target, ext, title, artist, album, artwork(info, tmp))
+            cover = artwork(info, tmp)
+            write_tags(target, ext, title, artist, album, cover)
 
             update(
                 jid,
                 status="ready",
-                phase="Ready",
+                phase=t("ready"),
                 progress=100,
                 path=target,
+                ext=ext,
                 filename=filename(artist, title, ext),
                 mime=MIME[ext],
+                title=title,
+                artist=artist,
+                album=album,
+                cover=cover,
             )
     except Exception as exc:
         app.logger.warning("job %s failed: %s", jid, clean_error(exc))
         update(jid, status="error", phase="", error=clean_error(exc))
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+def send_job(job):
+    return send_file(
+        job["path"],
+        as_attachment=True,
+        download_name=job["filename"],
+        mimetype=job["mime"],
+        max_age=0,
+    )
 
 
 @app.get("/")
@@ -316,31 +391,39 @@ def health():
     return "ok"
 
 
+@app.get("/api/config")
+def client_config():
+    return jsonify({"language": LANGUAGE, "expert": EXPERT})
+
+
 @app.post("/api/convert")
 def convert():
     url = parse_url(request.form.get("url", ""))
-    fmt = request.form.get("format", "original")
+    fmt = request.form.get("format", "mp3")
 
     if fmt not in {"original", *QUALITIES}:
-        raise ValueError("Pick a supported format.")
+        raise ValueError(t("bad_format"))
 
     quality = None
     if fmt != "original":
-        try:
-            quality = int(request.form.get("quality", ""))
-        except (TypeError, ValueError):
-            raise ValueError("Pick a quality.")
-        if quality not in QUALITIES[fmt]:
-            raise ValueError("Pick a supported quality.")
+        if EXPERT and request.form.get("quality"):
+            try:
+                quality = int(request.form.get("quality"))
+            except (TypeError, ValueError):
+                raise ValueError(t("bad_quality"))
+            if quality not in QUALITIES[fmt]:
+                raise ValueError(t("bad_quality"))
+        else:
+            quality = max(QUALITIES[fmt])
 
     purge()
     with jobs_lock:
         active = sum(1 for job in jobs.values() if job["status"] in {"queued", "running"})
         if active >= MAX_JOBS:
-            return jsonify({"error": "Busy right now, try again in a minute."}), 429
+            return jsonify({"error": t("busy")}), 429
 
         jid = uuid.uuid4().hex[:12]
-        jobs[jid] = {"status": "queued", "phase": "Queued", "progress": 0, "created": time.time()}
+        jobs[jid] = {"status": "queued", "phase": t("queued"), "progress": 0, "created": time.time()}
 
     threading.Thread(target=run_job, args=(jid, url, fmt, quality), daemon=True).start()
     return jsonify({"id": jid}), 202
@@ -353,7 +436,12 @@ def job_status(jid):
         job = jobs.get(jid)
         if not job:
             abort(404)
-        return jsonify({key: job.get(key) for key in ("status", "phase", "progress", "error", "filename")})
+        return jsonify(
+            {
+                key: job.get(key)
+                for key in ("status", "phase", "progress", "error", "filename", "title", "artist", "album")
+            }
+        )
 
 
 @app.get("/api/job/<jid>/file")
@@ -363,13 +451,30 @@ def job_file(jid):
         job = jobs.get(jid)
         if not job or job.get("status") != "ready" or not os.path.isfile(job.get("path", "")):
             abort(404)
-        return send_file(
-            job["path"],
-            as_attachment=True,
-            download_name=job["filename"],
-            mimetype=job["mime"],
-            max_age=0,
-        )
+        return send_job(job)
+
+
+@app.post("/api/job/<jid>/download")
+def job_download(jid):
+    purge()
+    with jobs_lock:
+        job = jobs.get(jid)
+        if not job or job.get("status") != "ready" or not os.path.isfile(job.get("path", "")):
+            abort(404)
+
+        if EXPERT:
+            title = clean_tag(request.form.get("title"))
+            artist = clean_tag(request.form.get("artist"))
+            album = clean_tag(request.form.get("album"))
+            if not title or not artist:
+                raise ValueError(t("meta_required"))
+            if any(len(value) > 200 for value in (title, artist, album)):
+                raise ValueError(t("meta_long"))
+
+            write_tags(job["path"], job["ext"], title, artist, album, job.get("cover"))
+            job["filename"] = filename(artist, title, job["ext"])
+
+        return send_job(job)
 
 
 @app.errorhandler(ValueError)

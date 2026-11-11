@@ -30,23 +30,24 @@ label[data-field] {
   width: 100%;
 }
 select,
-input[type="url"] {
+input[type="url"],
+input[type="text"] {
   width: 100%;
 }
 input[type="url"] {
   font-family: var(--font-mono);
   font-size: .85em;
 }
-button {
+article.card button:not(.outline) {
   width: 100%;
-  background: var(--primary);
+  background-color: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--primary);
 }
-button:hover {
-  background: color-mix(in srgb, var(--primary), #000 12%);
+article.card button:not(.outline):hover {
+  background-color: color-mix(in srgb, var(--primary), #000 12%);
 }
-button:disabled {
+article.card button:not(.outline):disabled {
   opacity: .55;
   cursor: progress;
 }
@@ -88,6 +89,11 @@ button:disabled {
   margin: 1.1rem 0 0;
   font-size: var(--text-7);
   color: var(--danger);
+}
+.meta {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
 }
 @media (max-width: 30rem) {
   body {

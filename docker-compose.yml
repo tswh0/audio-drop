@@ -10,6 +10,8 @@ services:
       MAX_DURATION: "10800"
       MAX_CONCURRENT: "2"
       MAX_JOBS: "20"
+      LANGUAGE: "${LANGUAGE:-de}"
+      EXPERT_MODE: "${EXPERT_MODE:-false}"
     tmpfs:
       - /tmp:size=2g,mode=1777
     read_only: true

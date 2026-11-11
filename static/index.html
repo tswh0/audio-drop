@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -18,34 +18,49 @@
 <article class="card">
   <header>
     <h1>audio-drop</h1>
-    <p>Paste a YouTube link, pick a format, get a tagged audio file.</p>
+    <p data-i18n="subtitle">YouTube-Link einfügen, Format wählen, fertige Audiodatei herunterladen.</p>
   </header>
 
   <form id="convert">
     <div class="vstack gap-4">
-      <label data-field>YouTube link
+      <label data-field><span data-i18n="link">YouTube-Link</span>
         <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off" spellcheck="false">
       </label>
-      <label data-field>Format
+      <label data-field><span data-i18n="format">Format</span>
         <select name="format">
-          <option value="original" selected>Original (no re-encode)</option>
-          <option value="mp3">MP3</option>
+          <option value="mp3" selected>MP3</option>
           <option value="m4a">M4A (AAC)</option>
           <option value="opus">Opus</option>
+          <option value="original" data-i18n="format_original">Original (keine Neukodierung)</option>
         </select>
       </label>
-      <label data-field>Quality
-        <select name="quality" disabled></select>
+      <label data-field class="quality-field" hidden><span data-i18n="quality">Qualität</span>
+        <select name="quality"></select>
       </label>
-      <button>Convert</button>
+      <button data-i18n="convert">Konvertieren</button>
     </div>
   </form>
 
   <div class="progress" hidden>
-    <div class="bar" role="progressbar" aria-label="Conversion progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
-    <p class="phase"><span class="phase-label">Starting...</span><span class="phase-value">0%</span></p>
+    <div class="bar" role="progressbar" aria-label="Konvertierungsfortschritt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+    <p class="phase"><span class="phase-label">Wird gestartet …</span><span class="phase-value">0%</span></p>
   </div>
   <p class="notice" hidden></p>
+
+  <form id="meta" class="meta" hidden>
+    <div class="vstack gap-4">
+      <label data-field><span data-i18n="meta_title">Titel</span>
+        <input type="text" name="title" maxlength="200" required autocomplete="off">
+      </label>
+      <label data-field><span data-i18n="meta_artist">Künstler</span>
+        <input type="text" name="artist" maxlength="200" required autocomplete="off">
+      </label>
+      <label data-field><span data-i18n="meta_album">Album</span>
+        <input type="text" name="album" maxlength="200" autocomplete="off">
+      </label>
+      <button data-i18n="download">Herunterladen</button>
+    </div>
+  </form>
 </article>
 
 <script src="/oat.min.js" defer></script>
