@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 import re
 import shutil
@@ -19,6 +20,8 @@ from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 
 app = Flask(__name__, static_folder="static", static_url_path="")
+app.logger.setLevel(logging.INFO)
+app.logger.propagate = False
 
 FFMPEG = os.environ.get("FFMPEG", "ffmpeg")
 FFPROBE = os.environ.get("FFPROBE", "ffprobe")
@@ -134,6 +137,12 @@ def clean_error(exc):
 def clean_tag(value):
     text = TAG_CONTROL.sub(" ", value or "")
     return re.sub(r"\s+", " ", text).strip()
+
+
+def client_ip():
+    raw = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Forwarded-For", "")
+    ip = raw.split(",")[0].strip() if raw else (request.remote_addr or "-")
+    return re.sub(r"[^0-9A-Fa-f:.]", "", ip)[:64] or "-"
 
 
 def parse_url(raw):
@@ -365,13 +374,28 @@ def run_job(jid, url, fmt, quality):
                 cover=cover,
             )
     except Exception as exc:
-        app.logger.warning("job %s failed: %s", jid, clean_error(exc))
+        app.logger.warning("job %s failed url=%s: %s", jid, url, clean_error(exc))
         update(jid, status="error", phase="", error=clean_error(exc))
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
 
 
 def send_job(job):
+    try:
+        size = os.path.getsize(job["path"])
+    except OSError:
+        size = 0
+    app.logger.info(
+        'download id=%s ip=%s format=%s quality=%s bytes=%d title=%r artist=%r url=%s',
+        job.get("jid"),
+        client_ip(),
+        job.get("ext"),
+        job.get("quality") or "source",
+        size,
+        job.get("title") or "",
+        job.get("artist") or "",
+        job.get("url") or "",
+    )
     return send_file(
         job["path"],
         as_attachment=True,
@@ -423,7 +447,15 @@ def convert():
             return jsonify({"error": t("busy")}), 429
 
         jid = uuid.uuid4().hex[:12]
-        jobs[jid] = {"status": "queued", "phase": t("queued"), "progress": 0, "created": time.time()}
+        jobs[jid] = {
+            "jid": jid,
+            "url": url,
+            "quality": quality,
+            "status": "queued",
+            "phase": t("queued"),
+            "progress": 0,
+            "created": time.time(),
+        }
 
     threading.Thread(target=run_job, args=(jid, url, fmt, quality), daemon=True).start()
     return jsonify({"id": jid}), 202

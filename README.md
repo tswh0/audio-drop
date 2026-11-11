@@ -55,5 +55,6 @@ Cookies are login credentials: keep the file private and out of git. They expire
 ## Notes
 
 - No auth. Anyone with the URL can convert.
+- Every served download logs one line to the container log: id, IP, format, quality, bytes, title, artist, URL.
 - yt-dlp is pinned; Renovate opens a PR for new releases. Rebuild after merging.
 - `MAX_DURATION` (seconds, default 10800), `MAX_CONCURRENT` and `MAX_JOBS` are environment knobs.
