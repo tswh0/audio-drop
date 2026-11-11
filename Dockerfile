@@ -23,9 +23,10 @@ RUN rm -rf /usr/local/lib/python3.13/site-packages/pip \
         /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
         /usr/local/lib/python3.13/ensurepip \
         /usr/local/bin/pip* \
-    && adduser -S -D -H -u 10001 app
+    && addgroup -S -g 10001 app \
+    && adduser -S -D -H -u 10001 -G app app
 
-USER 10001
+USER 10001:10001
 
 EXPOSE 8080
 

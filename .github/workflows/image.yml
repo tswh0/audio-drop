@@ -48,6 +48,8 @@ jobs:
       - name: Size
         run: |
           docker image inspect ghcr.io/${{ github.repository }}:latest --format '{{.Size}}' | awk '{printf "image size: %.1f MB\n", $1/1000000}'
+      - name: Runtime user
+        run: test "$(docker image inspect ghcr.io/${{ github.repository }}:latest --format '{{.Config.User}}')" = "10001:10001"
       - name: Scan
         run: |
           curl -sSLo /tmp/trivy.tar.gz https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
