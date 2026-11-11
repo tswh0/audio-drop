@@ -452,6 +452,17 @@ def health():
     return "ok"
 
 
+@app.get("/api/client")
+def api_client():
+    return jsonify(
+        ip=client_ip(),
+        remote=request.remote_addr,
+        x_real_ip=request.headers.get("X-Real-IP"),
+        cf_connecting_ip=request.headers.get("CF-Connecting-IP"),
+        x_forwarded_for=request.headers.get("X-Forwarded-For"),
+    )
+
+
 @app.get("/api/config")
 def client_config():
     return jsonify({"language": LANGUAGE, "expert": EXPERT})
