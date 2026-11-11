@@ -15,7 +15,7 @@ import requests
 import yt_dlp
 from flask import Flask, abort, jsonify, request, send_file
 from mutagen.flac import Picture
-from mutagen.id3 import APIC, ID3, TALB, TIT2, TPE1
+from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 
@@ -160,6 +160,15 @@ def parse_url(raw):
     return parsed.geturl()
 
 
+def release_year(info):
+    value = info.get("release_year")
+    if not value:
+        date = str(info.get("release_date") or info.get("upload_date") or "")
+        value = date[:4]
+    value = str(value or "")[:4]
+    return value if re.fullmatch(r"\d{4}", value) else ""
+
+
 def metadata(info):
     title = (info.get("track") or info.get("title") or "Audio").strip()
     artist = (info.get("artist") or "").strip()
@@ -174,7 +183,7 @@ def metadata(info):
 
     title = TITLE_NOISE.sub("", title).strip() or title
     album = (info.get("album") or "").strip()
-    return title, artist, album
+    return title, artist, album, release_year(info)
 
 
 def artwork(info, tmp):
@@ -255,13 +264,15 @@ def encode(source, fmt, quality, tmp):
     return target, ext
 
 
-def write_tags(path, ext, title, artist, album, cover):
+def write_tags(path, ext, title, artist, album, year, cover):
     if ext == "mp3":
         tags = ID3()
         tags.add(TIT2(encoding=3, text=title))
         tags.add(TPE1(encoding=3, text=artist))
         if album:
             tags.add(TALB(encoding=3, text=album))
+        if year:
+            tags.add(TDRC(encoding=3, text=year))
         if cover:
             tags.add(APIC(encoding=3, mime=cover[1], type=3, desc="Cover", data=cover[0]))
         tags.save(path, v2_version=3)
@@ -273,6 +284,10 @@ def write_tags(path, ext, title, artist, album, cover):
             audio["\xa9alb"] = [album]
         else:
             audio.pop("\xa9alb", None)
+        if year:
+            audio["\xa9day"] = [year]
+        else:
+            audio.pop("\xa9day", None)
         if cover:
             image_format = MP4Cover.FORMAT_PNG if cover[1] == "image/png" else MP4Cover.FORMAT_JPEG
             audio["covr"] = [MP4Cover(cover[0], imageformat=image_format)]
@@ -285,6 +300,10 @@ def write_tags(path, ext, title, artist, album, cover):
             audio["album"] = [album]
         else:
             audio.pop("album", None)
+        if year:
+            audio["date"] = [year]
+        else:
+            audio.pop("date", None)
         if cover:
             picture = Picture()
             picture.type = 3
@@ -355,9 +374,9 @@ def run_job(jid, url, fmt, quality):
             target, ext = encode(source, fmt, quality, tmp)
 
             update(jid, phase=t("tagging"), progress=90)
-            title, artist, album = metadata(info)
+            title, artist, album, year = metadata(info)
             cover = artwork(info, tmp)
-            write_tags(target, ext, title, artist, album, cover)
+            write_tags(target, ext, title, artist, album, year, cover)
 
             update(
                 jid,
@@ -371,6 +390,7 @@ def run_job(jid, url, fmt, quality):
                 title=title,
                 artist=artist,
                 album=album,
+                year=year,
                 cover=cover,
             )
     except Exception as exc:
@@ -503,7 +523,7 @@ def job_download(jid):
             if any(len(value) > 200 for value in (title, artist, album)):
                 raise ValueError(t("meta_long"))
 
-            write_tags(job["path"], job["ext"], title, artist, album, job.get("cover"))
+            write_tags(job["path"], job["ext"], title, artist, album, job.get("year") or "", job.get("cover"))
             job["filename"] = filename(artist, title, job["ext"])
 
         return send_job(job)

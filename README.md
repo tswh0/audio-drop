@@ -1,6 +1,6 @@
 # audio-drop
 
-Paste a YouTube link, get a tagged audio file. Title, artist and cover are written into the file. UI is [Oat](https://oat.ink).
+Paste a YouTube link, get a tagged audio file. Title, artist, year and cover are written into the file. UI is [Oat](https://oat.ink).
 
 ## Run
 
