@@ -16,7 +16,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY --from=build /install /usr/local
-COPY app.py .
+COPY app.py serve.py .
 COPY static ./static
 
 RUN rm -rf /usr/local/lib/python3.13/site-packages/pip \
@@ -33,4 +33,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)"]
 
-CMD ["waitress-serve", "--listen=0.0.0.0:8080", "--threads=6", "app:app"]
+CMD ["python", "serve.py"]
