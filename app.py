@@ -140,9 +140,12 @@ def clean_tag(value):
 
 
 def client_ip():
-    raw = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Forwarded-For", "")
-    ip = raw.split(",")[0].strip() if raw else (request.remote_addr or "-")
-    return re.sub(r"[^0-9A-Fa-f:.]", "", ip)[:64] or "-"
+    for header in ("X-Real-IP", "CF-Connecting-IP", "X-Forwarded-For"):
+        for part in request.headers.get(header, "").split(","):
+            ip = re.sub(r"[^0-9A-Fa-f:.]", "", part.strip())[:64]
+            if ip:
+                return ip
+    return re.sub(r"[^0-9A-Fa-f:.]", "", request.remote_addr or "")[:64] or "-"
 
 
 def parse_url(raw):
