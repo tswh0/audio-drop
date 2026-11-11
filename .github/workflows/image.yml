@@ -3,6 +3,8 @@ name: image
 on:
   release:
     types: [published]
+  schedule:
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 permissions:
