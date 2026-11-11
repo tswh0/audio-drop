@@ -13,23 +13,42 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: true
+          load: true
+          sbom: true
+          provenance: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      - name: Smoke test
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:latest
+        run: |
+          docker run --rm "$IMAGE" ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libmp3lame
+          docker run --rm "$IMAGE" ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libopus
+          docker run --rm "$IMAGE" python -c "import flask, mutagen, requests, waitress, yt_dlp; print('imports ok')"
+      - name: Size
+        run: |
+          docker image inspect ghcr.io/${{ github.repository }}:latest --format '{{.Size}}' | awk '{printf "image size: %.1f MB\n", $1/1000000}'
+      - name: Scan
+        run: |
+          curl -sSLo /tmp/trivy.tar.gz https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
+          echo "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf  /tmp/trivy.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+          /tmp/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --quiet "ghcr.io/${{ github.repository }}:latest"
