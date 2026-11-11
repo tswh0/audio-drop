@@ -2,9 +2,11 @@ const form = document.getElementById('convert');
 const format = form.elements.format;
 const quality = form.elements.quality;
 const button = form.querySelector('button');
-const bar = document.querySelector('.bar');
+const progress = document.querySelector('.progress');
+const bar = progress.querySelector('.bar');
 const fill = bar.firstElementChild;
-const phase = document.querySelector('.phase');
+const label = progress.querySelector('.phase-label');
+const value = progress.querySelector('.phase-value');
 const notice = document.querySelector('.notice');
 
 const QUALITIES = {
@@ -18,16 +20,23 @@ function syncQuality() {
   const values = QUALITIES[format.value] || [];
   quality.replaceChildren(
     ...(values.length
-      ? values.map((value) => new Option(`${value} kbps`, value))
+      ? values.map((points) => new Option(`${points} kbps`, points))
       : [new Option('Source', '')])
   );
   quality.disabled = values.length === 0;
 }
 
+function setProgress(percent, text) {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent || 0)));
+  fill.style.width = `${clamped}%`;
+  bar.setAttribute('aria-valuenow', clamped);
+  value.textContent = `${clamped}%`;
+  if (text !== undefined) label.textContent = text;
+}
+
 function reset() {
   button.disabled = false;
-  bar.hidden = true;
-  phase.hidden = true;
+  progress.hidden = true;
   fill.style.width = '0%';
 }
 
@@ -49,12 +58,10 @@ async function poll(id) {
 
   if (job.status === 'error') return fail(job.error || 'Conversion failed.');
 
-  phase.textContent = job.phase || 'Working...';
-  fill.style.width = `${job.progress || 0}%`;
+  setProgress(job.progress, job.phase || 'Working...');
 
   if (job.status === 'ready') {
-    phase.textContent = 'Ready. Your download starts now.';
-    fill.style.width = '100%';
+    setProgress(100, 'Ready. Your download starts now.');
     window.location.assign(`/api/job/${id}/file`);
     setTimeout(reset, 2500);
     return;
@@ -69,10 +76,8 @@ syncQuality();
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   notice.hidden = true;
-  bar.hidden = false;
-  phase.hidden = false;
-  phase.textContent = 'Starting...';
-  fill.style.width = '0%';
+  progress.hidden = false;
+  setProgress(0, 'Starting...');
   button.disabled = true;
 
   let response;

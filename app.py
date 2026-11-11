@@ -232,7 +232,7 @@ def fetch(url, jid, tmp):
             return
         total = event.get("total_bytes") or event.get("total_bytes_estimate") or 0
         if total:
-            update(jid, progress=min(99, int(100 * event.get("downloaded_bytes", 0) / total)))
+            update(jid, progress=min(70, int(70 * event.get("downloaded_bytes", 0) / total)))
 
     options = {
         "format": "bestaudio/best",
@@ -275,10 +275,10 @@ def run_job(jid, url, fmt, quality):
             info = fetch(url, jid, tmp)
             source = info["requested_downloads"][0]["filepath"]
 
-            update(jid, phase="Converting", progress=100)
+            update(jid, phase="Converting", progress=75)
             target, ext = encode(source, fmt, quality, tmp)
 
-            update(jid, phase="Tagging")
+            update(jid, phase="Tagging", progress=90)
             title, artist, album = metadata(info)
             write_tags(target, ext, title, artist, album, artwork(info, tmp))
 

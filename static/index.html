@@ -41,8 +41,10 @@
     </div>
   </form>
 
-  <div class="bar" hidden><i></i></div>
-  <p class="phase" hidden></p>
+  <div class="progress" hidden>
+    <div class="bar" role="progressbar" aria-label="Conversion progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+    <p class="phase"><span class="phase-label">Starting...</span><span class="phase-value">0%</span></p>
+  </div>
   <p class="notice" hidden></p>
 </article>
 

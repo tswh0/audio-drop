@@ -1,6 +1,6 @@
 # audio-drop
 
-Paste a YouTube link, get a tagged audio file. Title, artist and cover are written into the file.
+Paste a YouTube link, get a tagged audio file. Title, artist and cover are written into the file. UI is [Oat](https://github.com/knadh/oat).
 
 ## Run
 
@@ -8,17 +8,33 @@ Paste a YouTube link, get a tagged audio file. Title, artist and cover are writt
 docker compose up -d --build
 ```
 
-Listens on `127.0.0.1:8090`. Caddy:
+Listens on `127.0.0.1:8090`. Each release also publishes `ghcr.io/tswh0/audio-drop:latest`.
 
+## Formats
+
+Original (source codec, no re-encode), MP3, M4A, Opus.
+
+## Cookies
+
+YouTube sometimes answers datacenter IPs with "Sign in to confirm you're not a bot".
+
+1. Install the "Get cookies.txt LOCALLY" extension in Chrome or Firefox.
+2. Sign in to YouTube, export the cookies for `youtube.com` in Netscape format, save the file as `cookies.txt` beside `docker-compose.yml`.
+3. Mount it into the service and point `COOKIES_FILE` at it:
+
+```yaml
+services:
+  audio-drop:
+    volumes:
+      - ./cookies.txt:/cookies.txt:ro
+    environment:
+      COOKIES_FILE: /cookies.txt
 ```
-audio.twh0.de {
-    reverse_proxy 127.0.0.1:8090
-}
-```
+
+Cookies are login credentials: keep the file private and out of git. They expire, so export again when downloads start failing.
 
 ## Notes
 
-- Formats: original (source codec, no re-encode), MP3, M4A, Opus.
-- No auth. Anyone with the URL can convert; put Cloudflare Access or Caddy basic auth in front if that matters.
-- yt-dlp goes stale when YouTube changes. `docker compose build --pull` now and then.
-- If YouTube asks for a sign-in check, mount a `cookies.txt` read-only and set `COOKIES_FILE` to its path.
+- No auth. Anyone with the URL can convert.
+- yt-dlp is pinned; Renovate opens a PR for new releases. Rebuild after merging.
+- `MAX_DURATION` (seconds, default 10800), `MAX_CONCURRENT` and `MAX_JOBS` are environment knobs.
