@@ -15,7 +15,7 @@ import requests
 import yt_dlp
 from flask import Flask, abort, jsonify, request, send_file
 from mutagen.flac import Picture
-from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1
+from mutagen.id3 import APIC, COMM, ID3, TALB, TDRC, TIT2, TPE1
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 
@@ -160,13 +160,17 @@ def parse_url(raw):
     return parsed.geturl()
 
 
-def release_year(info):
-    value = info.get("release_year")
-    if not value:
-        date = str(info.get("release_date") or info.get("upload_date") or "")
-        value = date[:4]
-    value = str(value or "")[:4]
-    return value if re.fullmatch(r"\d{4}", value) else ""
+def release_date(info):
+    value = str(info.get("release_date") or "")
+    if value:
+        value = value[:10]
+    else:
+        uploaded = str(info.get("upload_date") or "")
+        if re.fullmatch(r"\d{8}", uploaded):
+            value = f"{uploaded[:4]}-{uploaded[4:6]}-{uploaded[6:]}"
+        else:
+            value = str(info.get("release_year") or "")[:4]
+    return value if re.fullmatch(r"\d{4}(-\d{2}){0,2}", value) else ""
 
 
 def metadata(info):
@@ -183,7 +187,7 @@ def metadata(info):
 
     title = TITLE_NOISE.sub("", title).strip() or title
     album = (info.get("album") or "").strip()
-    return title, artist, album, release_year(info)
+    return title, artist, album, release_date(info)
 
 
 def artwork(info, tmp):
@@ -264,15 +268,17 @@ def encode(source, fmt, quality, tmp):
     return target, ext
 
 
-def write_tags(path, ext, title, artist, album, year, cover):
+def write_tags(path, ext, title, artist, album, date, url, cover):
     if ext == "mp3":
         tags = ID3()
         tags.add(TIT2(encoding=3, text=title))
         tags.add(TPE1(encoding=3, text=artist))
         if album:
             tags.add(TALB(encoding=3, text=album))
-        if year:
-            tags.add(TDRC(encoding=3, text=year))
+        if date:
+            tags.add(TDRC(encoding=3, text=date))
+        if url:
+            tags.add(COMM(encoding=3, lang="eng", desc="Source", text=url))
         if cover:
             tags.add(APIC(encoding=3, mime=cover[1], type=3, desc="Cover", data=cover[0]))
         tags.save(path, v2_version=3)
@@ -284,10 +290,14 @@ def write_tags(path, ext, title, artist, album, year, cover):
             audio["\xa9alb"] = [album]
         else:
             audio.pop("\xa9alb", None)
-        if year:
-            audio["\xa9day"] = [year]
+        if date:
+            audio["\xa9day"] = [date]
         else:
             audio.pop("\xa9day", None)
+        if url:
+            audio["\xa9cmt"] = [url]
+        else:
+            audio.pop("\xa9cmt", None)
         if cover:
             image_format = MP4Cover.FORMAT_PNG if cover[1] == "image/png" else MP4Cover.FORMAT_JPEG
             audio["covr"] = [MP4Cover(cover[0], imageformat=image_format)]
@@ -300,10 +310,14 @@ def write_tags(path, ext, title, artist, album, year, cover):
             audio["album"] = [album]
         else:
             audio.pop("album", None)
-        if year:
-            audio["date"] = [year]
+        if date:
+            audio["date"] = [date]
         else:
             audio.pop("date", None)
+        if url:
+            audio["comment"] = [url]
+        else:
+            audio.pop("comment", None)
         if cover:
             picture = Picture()
             picture.type = 3
@@ -374,9 +388,9 @@ def run_job(jid, url, fmt, quality):
             target, ext = encode(source, fmt, quality, tmp)
 
             update(jid, phase=t("tagging"), progress=90)
-            title, artist, album, year = metadata(info)
+            title, artist, album, date = metadata(info)
             cover = artwork(info, tmp)
-            write_tags(target, ext, title, artist, album, year, cover)
+            write_tags(target, ext, title, artist, album, date, url, cover)
 
             update(
                 jid,
@@ -390,7 +404,7 @@ def run_job(jid, url, fmt, quality):
                 title=title,
                 artist=artist,
                 album=album,
-                year=year,
+                date=date,
                 cover=cover,
             )
     except Exception as exc:
@@ -523,7 +537,16 @@ def job_download(jid):
             if any(len(value) > 200 for value in (title, artist, album)):
                 raise ValueError(t("meta_long"))
 
-            write_tags(job["path"], job["ext"], title, artist, album, job.get("year") or "", job.get("cover"))
+            write_tags(
+                job["path"],
+                job["ext"],
+                title,
+                artist,
+                album,
+                job.get("date") or "",
+                job.get("url") or "",
+                job.get("cover"),
+            )
             job["filename"] = filename(artist, title, job["ext"])
 
         return send_job(job)
