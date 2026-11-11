@@ -38,6 +38,21 @@ input[type="url"] {
   font-family: var(--font-mono);
   font-size: .85em;
 }
+.input-row {
+  display: flex;
+  gap: .5rem;
+  align-items: stretch;
+}
+.input-row input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.input-row .paste {
+  flex: none;
+  width: auto;
+  white-space: nowrap;
+}
 article.card button:not(.outline) {
   width: 100%;
   background-color: var(--primary);

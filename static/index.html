@@ -24,7 +24,10 @@
   <form id="convert">
     <div class="vstack gap-4">
       <label data-field><span data-i18n="link">YouTube-Link</span>
-        <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off" spellcheck="false">
+        <div class="input-row">
+          <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off" spellcheck="false">
+          <button type="button" class="outline small paste" data-i18n="paste">Einfügen</button>
+        </div>
       </label>
       <label data-field><span data-i18n="format">Format</span>
         <select name="format">
@@ -37,7 +40,7 @@
       <label data-field class="quality-field" hidden><span data-i18n="quality">Qualität</span>
         <select name="quality"></select>
       </label>
-      <button data-i18n="convert">Konvertieren</button>
+      <button id="convert-button" data-i18n="convert">Konvertieren</button>
     </div>
   </form>
 

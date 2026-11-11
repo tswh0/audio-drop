@@ -1,8 +1,10 @@
 const form = document.getElementById('convert');
 const format = form.elements.format;
 const quality = form.elements.quality;
+const urlInput = form.elements.url;
+const pasteButton = form.querySelector('.paste');
 const qualityField = quality.closest('label');
-const button = form.querySelector('button');
+const button = document.getElementById('convert-button');
 const metaForm = document.getElementById('meta');
 const metaButton = metaForm.querySelector('button');
 const progress = document.querySelector('.progress');
@@ -20,6 +22,9 @@ const STRINGS = {
     format_original: 'Original (keine Neukodierung)',
     quality: 'Qualität',
     convert: 'Konvertieren',
+    paste: 'Einfügen',
+    paste_empty: 'Zwischenablage ist leer.',
+    paste_failed: 'Zwischenablage nicht verfügbar – bitte manuell einfügen.',
     starting: 'Wird gestartet …',
     ready_download: 'Fertig. Download startet.',
     ready_edit: 'Fertig. Metadaten prüfen und herunterladen.',
@@ -39,6 +44,9 @@ const STRINGS = {
     format_original: 'Original (no re-encode)',
     quality: 'Quality',
     convert: 'Convert',
+    paste: 'Paste',
+    paste_empty: 'Clipboard is empty.',
+    paste_failed: 'Clipboard unavailable — paste manually.',
     starting: 'Starting …',
     ready_download: 'Ready. Your download starts now.',
     ready_edit: 'Ready. Check the metadata and download.',
@@ -102,10 +110,14 @@ function reset() {
   fill.style.width = '0%';
 }
 
-function fail(message) {
-  reset();
+function showNotice(message) {
   notice.textContent = message;
   notice.hidden = false;
+}
+
+function fail(message) {
+  reset();
+  showNotice(message);
 }
 
 function saveBlob(blob, name) {
@@ -156,6 +168,24 @@ async function poll(id) {
 
 format.addEventListener('change', syncQuality);
 syncQuality();
+
+pasteButton.addEventListener('click', async () => {
+  if (!navigator.clipboard?.readText) {
+    urlInput.focus();
+    return showNotice(ui('paste_failed'));
+  }
+
+  try {
+    const text = (await navigator.clipboard.readText()).trim();
+    if (!text) return showNotice(ui('paste_empty'));
+    urlInput.value = text;
+    notice.hidden = true;
+    urlInput.focus();
+  } catch {
+    urlInput.focus();
+    showNotice(ui('paste_failed'));
+  }
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
