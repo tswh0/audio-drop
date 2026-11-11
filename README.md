@@ -16,7 +16,7 @@ Build locally instead (dev, port 8091):
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-The published image listens on `127.0.0.1:8090`; the dev container on `127.0.0.1:8091`. If GHCR asks for auth, run `docker login ghcr.io` first.
+The published compose binds port `8090`; the dev container binds `127.0.0.1:8091`. If GHCR asks for auth, run `docker login ghcr.io` first.
 
 ## Formats
 
@@ -30,8 +30,9 @@ Opus stores tags as Vorbis comments on the audio stream, and its length comes fr
 LANGUAGE=en EXPERT_MODE=true docker compose up -d
 ```
 
-- `LANGUAGE` — `de` (default) or `en`, switches the UI and server messages.
+- `LANGUAGE` — `en` (default in the published compose) or `de`; the dev compose defaults to `de`.
 - `EXPERT_MODE` — `true` shows the quality selector and lets you edit title, artist and album before download.
+- `TRUSTED_PROXY` — peer allowed to supply `X-Forwarded-For`; defaults to `*`. Set it to your reverse proxy IP to prevent log spoofing.
 
 ## Cookies
 
