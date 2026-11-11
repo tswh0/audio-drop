@@ -126,18 +126,26 @@ def artwork(info, tmp):
     try:
         response = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()
-        data = response.content
-
-        if data[:3] == b"\xff\xd8\xff":
-            return data, "image/jpeg"
-        if data[:8] == b"\x89PNG\r\n\x1a\n":
-            return data, "image/png"
 
         source = os.path.join(tmp, "cover.bin")
         target = os.path.join(tmp, "cover.jpg")
-        Path(source).write_bytes(data)
+        Path(source).write_bytes(response.content)
         subprocess.run(
-            [FFMPEG, "-y", "-loglevel", "error", "-i", source, "-frames:v", "1", "-q:v", "2", target],
+            [
+                FFMPEG,
+                "-y",
+                "-loglevel",
+                "error",
+                "-i",
+                source,
+                "-vf",
+                "scale='min(640,iw)':-2",
+                "-frames:v",
+                "1",
+                "-q:v",
+                "4",
+                target,
+            ],
             check=True,
             timeout=60,
         )

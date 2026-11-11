@@ -22,6 +22,8 @@ The published image listens on `127.0.0.1:8090`; the dev container on `127.0.0.1
 
 Original (source codec, no re-encode), MP3, M4A, Opus.
 
+Opus stores tags as Vorbis comments on the audio stream, and its length comes from the last Ogg granule. Players that only read ID3/MP4 can show no tags and may estimate a longer duration from file size.
+
 ## Cookies
 
 YouTube sometimes answers datacenter IPs with "Sign in to confirm you're not a bot".
