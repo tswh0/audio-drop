@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>audio-drop</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0c0d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/oat.min.css">
+<link rel="stylesheet" href="/page.css">
+</head>
+<body>
+
+<article class="card">
+  <header>
+    <h1>audio-drop</h1>
+    <p>Paste a YouTube link, pick a format, get a tagged audio file.</p>
+  </header>
+
+  <form id="convert">
+    <div class="vstack gap-4">
+      <label data-field>YouTube link
+        <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required autocomplete="off" spellcheck="false">
+      </label>
+      <label data-field>Format
+        <select name="format">
+          <option value="original" selected>Original (no re-encode)</option>
+          <option value="mp3">MP3</option>
+          <option value="m4a">M4A (AAC)</option>
+          <option value="opus">Opus</option>
+        </select>
+      </label>
+      <label data-field>Quality
+        <select name="quality" disabled></select>
+      </label>
+      <button>Convert</button>
+    </div>
+  </form>
+
+  <div class="bar" hidden><i></i></div>
+  <p class="phase" hidden></p>
+  <p class="notice" hidden></p>
+</article>
+
+<script src="/oat.min.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>
