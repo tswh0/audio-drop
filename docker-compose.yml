@@ -1,6 +1,6 @@
 services:
   audio-drop:
-    image: ghcr.io/tswh0/audio-drop:latest
+    image: ghcr.io/tswh0/audio-drop:latest@sha256:c9b74c729d470d8c58656a39d4a4d14a5f523c23f03b3129c06af7fe72bc2a02
     pull_policy: always
     container_name: audio-drop
     restart: unless-stopped
