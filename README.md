@@ -4,11 +4,19 @@ Paste a YouTube link, get a tagged audio file. Title, artist and cover are writt
 
 ## Run
 
+Published image:
+
 ```sh
-docker compose up -d --build
+docker compose up -d
 ```
 
-Listens on `127.0.0.1:8090`. Each release also publishes `ghcr.io/tswh0/audio-drop:latest`.
+Build locally instead (dev, port 8091):
+
+```sh
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+The published image listens on `127.0.0.1:8090`; the dev container on `127.0.0.1:8091`. If GHCR asks for auth, run `docker login ghcr.io` first.
 
 ## Formats
 

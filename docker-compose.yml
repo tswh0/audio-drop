@@ -1,7 +1,7 @@
 services:
   audio-drop:
-    build: .
-    image: audio-drop:latest
+    image: ghcr.io/tswh0/audio-drop:latest
+    pull_policy: always
     container_name: audio-drop
     restart: unless-stopped
     ports:
