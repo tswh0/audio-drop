@@ -13,7 +13,6 @@ services:
       RATE_LIMIT: "10"
       LANGUAGE: "${LANGUAGE:-en}"
       EXPERT_MODE: "${EXPERT_MODE:-false}"
-      TRUSTED_PROXY: "192.168.6.134"
     init: true
     cpus: "2"
     mem_limit: 2g
