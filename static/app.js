@@ -16,7 +16,7 @@ const notice = document.querySelector('.notice');
 
 const STRINGS = {
   de: {
-    subtitle: 'YouTube-Link einfügen, Format wählen, fertige Audiodatei herunterladen.',
+    subtitle: 'YouTube-Link rein, Format wählen, getaggte Audiodatei raus.',
     link: 'YouTube-Link',
     format: 'Format',
     format_original: 'Original (keine Neukodierung)',
@@ -36,9 +36,10 @@ const STRINGS = {
     job_gone: 'Der Auftrag ist nicht mehr vorhanden. Bitte erneut versuchen.',
     unreachable: 'Server nicht erreichbar.',
     request_failed: 'Anfrage fehlgeschlagen.',
+    footnote: 'MP3 · M4A · Opus · Original — kein Konto, keine Playlist, keine Werbung.',
   },
   en: {
-    subtitle: 'Paste a YouTube link, pick a format, get a tagged audio file.',
+    subtitle: 'Drop a YouTube link, pick a format, take the tagged file.',
     link: 'YouTube link',
     format: 'Format',
     format_original: 'Original (no re-encode)',
@@ -58,6 +59,7 @@ const STRINGS = {
     job_gone: 'The job is gone. Try again.',
     unreachable: 'Could not reach the server.',
     request_failed: 'Request failed.',
+    footnote: 'MP3 · M4A · Opus · Original — no account, no playlist, no ads.',
   },
 };
 
@@ -108,6 +110,7 @@ function reset() {
   progress.hidden = true;
   metaForm.hidden = true;
   fill.style.width = '0%';
+  delete document.body.dataset.state;
 }
 
 function showNotice(message) {
@@ -146,6 +149,7 @@ async function poll(id) {
   setProgress(job.progress, job.phase || ui('starting'));
 
   if (job.status === 'ready') {
+    document.body.dataset.state = 'ready';
     currentFilename = job.filename || currentFilename;
     if (expert) {
       metaForm.action = `/api/job/${id}/download`;
@@ -192,6 +196,7 @@ form.addEventListener('submit', async (event) => {
   notice.hidden = true;
   metaForm.hidden = true;
   progress.hidden = false;
+  document.body.dataset.state = 'working';
   setProgress(0, ui('starting'));
   button.disabled = true;
 
