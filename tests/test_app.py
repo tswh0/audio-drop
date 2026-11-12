@@ -119,6 +119,55 @@ class ConvertTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
 
 
+class LimitTests(unittest.TestCase):
+    def setUp(self):
+        with audio.jobs_lock:
+            audio.jobs.clear()
+        with audio.hits_lock:
+            audio.hits.clear()
+        self.limit = audio.RATE_LIMIT
+        audio.RATE_LIMIT = 2
+        self.client = audio.app.test_client()
+
+    def tearDown(self):
+        audio.RATE_LIMIT = self.limit
+        with audio.jobs_lock:
+            audio.jobs.clear()
+        with audio.hits_lock:
+            audio.hits.clear()
+
+    def test_rate_limit(self):
+        with mock.patch.object(audio, "run_job"):
+            codes = [
+                self.client.post("/api/convert", data={"url": "https://youtu.be/abc", "format": "mp3"}).status_code
+                for _ in range(3)
+            ]
+        self.assertEqual(codes, [202, 202, 429])
+        response = self.client.post("/api/convert", data={"url": "https://youtu.be/abc", "format": "mp3"})
+        self.assertEqual(response.headers["Retry-After"], "60")
+        self.assertIn("Too many", response.get_json()["error"])
+
+    def test_body_cap(self):
+        response = self.client.post("/api/convert", data={"url": "https://youtu.be/" + "x" * (64 * 1024)})
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("too large", response.get_json()["error"])
+
+    def test_limit_can_be_disabled(self):
+        audio.RATE_LIMIT = 0
+        with mock.patch.object(audio, "run_job"):
+            codes = [
+                self.client.post("/api/convert", data={"url": "https://youtu.be/abc", "format": "mp3"}).status_code
+                for _ in range(3)
+            ]
+        self.assertEqual(codes, [202, 202, 202])
+
+    def test_prune_drops_stale_ips(self):
+        with audio.hits_lock:
+            audio.hits["1.2.3.4"] = [time.monotonic() - audio.RATE_WINDOW - 1]
+        audio.prune_hits()
+        self.assertNotIn("1.2.3.4", audio.hits)
+
+
 class RequestTests(unittest.TestCase):
     def test_real_ip_wins_over_forwarded_for(self):
         with audio.app.test_request_context(

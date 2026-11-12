@@ -18,6 +18,7 @@ from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 
 app = Flask(__name__, static_folder="static", static_url_path="")
+app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
 app.logger.setLevel(logging.INFO)
 app.logger.propagate = False
 
@@ -26,6 +27,8 @@ FFPROBE = os.environ.get("FFPROBE", "ffprobe")
 MAX_DURATION = int(os.environ.get("MAX_DURATION", 3 * 3600))
 MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT", 2))
 MAX_JOBS = int(os.environ.get("MAX_JOBS", 20))
+RATE_LIMIT = int(os.environ.get("RATE_LIMIT", 10))
+RATE_WINDOW = 60
 JOB_TTL = 30 * 60
 COOKIES = os.environ.get("COOKIES_FILE", "")
 
@@ -44,6 +47,8 @@ MESSAGES = {
         "bad_quality": "Bitte eine unterstützte Qualität wählen.",
         "busy": "Gerade ausgelastet, bitte in einer Minute erneut versuchen.",
         "failed": "Konvertierung fehlgeschlagen.",
+        "too_large": "Anfrage zu groß.",
+        "rate": "Zu viele Anfragen — bitte eine Minute warten.",
         "meta_required": "Titel und Künstler dürfen nicht leer sein.",
         "meta_long": "Titel, Künstler und Album dürfen höchstens 200 Zeichen lang sein.",
         "queued": "In der Warteschlange",
@@ -62,6 +67,8 @@ MESSAGES = {
         "bad_quality": "Pick a supported quality.",
         "busy": "Busy right now, try again in a minute.",
         "failed": "Conversion failed.",
+        "too_large": "Request too large.",
+        "rate": "Too many requests — wait a minute.",
         "meta_required": "Title and artist must not be empty.",
         "meta_long": "Title, artist and album must be 200 characters or less.",
         "queued": "Queued",
@@ -104,6 +111,8 @@ TAG_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 jobs = {}
 jobs_lock = threading.Lock()
 slots = threading.BoundedSemaphore(MAX_CONCURRENT)
+hits = {}
+hits_lock = threading.Lock()
 
 
 def update(jid, **fields):
@@ -126,10 +135,36 @@ def purge():
                 shutil.rmtree(job["tmp"], ignore_errors=True)
 
 
+def prune_hits():
+    now = time.monotonic()
+    with hits_lock:
+        for ip in list(hits):
+            recent = [t for t in hits[ip] if now - t < RATE_WINDOW]
+            if recent:
+                hits[ip] = recent
+            else:
+                del hits[ip]
+
+
+def allowed(ip):
+    if RATE_LIMIT <= 0:
+        return True
+    now = time.monotonic()
+    with hits_lock:
+        recent = [t for t in hits.get(ip, ()) if now - t < RATE_WINDOW]
+        if len(recent) >= RATE_LIMIT:
+            hits[ip] = recent
+            return False
+        recent.append(now)
+        hits[ip] = recent
+        return True
+
+
 def janitor():
     while True:
         time.sleep(60)
         purge()
+        prune_hits()
 
 
 threading.Thread(target=janitor, daemon=True).start()
@@ -482,6 +517,9 @@ def client_config():
 
 @app.post("/api/convert")
 def convert():
+    if not allowed(request.remote_addr or "-"):
+        return jsonify({"error": t("rate")}), 429, {"Retry-After": str(RATE_WINDOW)}
+
     url = parse_url(request.form.get("url", ""))
     fmt = request.form.get("format", "mp3")
 
@@ -581,6 +619,11 @@ def job_download(jid):
 @app.errorhandler(ValueError)
 def bad_request(exc):
     return jsonify({"error": str(exc)}), 400
+
+
+@app.errorhandler(413)
+def too_large(exc):
+    return jsonify({"error": t("too_large")}), 413
 
 
 @app.after_request

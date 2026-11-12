@@ -32,6 +32,7 @@ LANGUAGE=en EXPERT_MODE=true docker compose up -d
 
 - `LANGUAGE` — `en` (default in the published compose) or `de`; the dev compose defaults to `de`.
 - `EXPERT_MODE` — `true` shows the quality selector and lets you edit title, artist and album before download.
+- `RATE_LIMIT` — requests to `/api/convert` per IP per minute (default `10`); `0` disables the limiter. Request bodies are capped at 64 KB.
 - `TRUSTED_PROXY` — peer allowed to supply `X-Forwarded-For`; defaults to `*` in `serve.py`, and the published compose pins it to the Caddy host `192.168.6.134`.
 - Firewall 8090 on the Docker host so only the Caddy host can reach it; the app has no auth of its own.
 

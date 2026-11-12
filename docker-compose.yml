@@ -10,6 +10,7 @@ services:
       MAX_DURATION: "10800"
       MAX_CONCURRENT: "2"
       MAX_JOBS: "20"
+      RATE_LIMIT: "10"
       LANGUAGE: "${LANGUAGE:-en}"
       EXPERT_MODE: "${EXPERT_MODE:-false}"
       TRUSTED_PROXY: "192.168.6.134"
