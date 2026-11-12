@@ -11,8 +11,6 @@ import uuid
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import requests
-import yt_dlp
 from flask import Flask, abort, jsonify, request, send_file
 from mutagen.flac import Picture
 from mutagen.id3 import APIC, COMM, ID3, TALB, TDRC, TIT2, TPE1
@@ -119,12 +117,22 @@ def purge():
         stale = [
             jid
             for jid, job in jobs.items()
-            if job["status"] in {"ready", "error"} and now - job["created"] > JOB_TTL
+            if (job["status"] in {"ready", "error"} and now - job["created"] > JOB_TTL)
+            or now - job["created"] > MAX_DURATION + JOB_TTL
         ]
         for jid in stale:
             job = jobs.pop(jid)
             if job.get("tmp"):
                 shutil.rmtree(job["tmp"], ignore_errors=True)
+
+
+def janitor():
+    while True:
+        time.sleep(60)
+        purge()
+
+
+threading.Thread(target=janitor, daemon=True).start()
 
 
 def clean_error(exc):
@@ -194,6 +202,8 @@ def metadata(info):
 
 
 def artwork(info, tmp):
+    import requests
+
     url = info.get("thumbnail")
     if not url:
         thumbs = info.get("thumbnails") or []
@@ -339,6 +349,8 @@ def filename(artist, title, ext):
 
 
 def fetch(url, jid, tmp):
+    import yt_dlp
+
     def progress(event):
         if event.get("status") != "downloading":
             return
