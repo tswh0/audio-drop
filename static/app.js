@@ -36,7 +36,6 @@ const STRINGS = {
     job_gone: 'Der Auftrag ist nicht mehr vorhanden. Bitte erneut versuchen.',
     unreachable: 'Server nicht erreichbar.',
     request_failed: 'Anfrage fehlgeschlagen.',
-    footnote: 'MP3 · M4A · Opus · Original — kein Konto, keine Playlist, keine Werbung.',
   },
   en: {
     subtitle: 'Drop a YouTube link, pick a format, take the tagged file.',
@@ -59,7 +58,6 @@ const STRINGS = {
     job_gone: 'The job is gone. Try again.',
     unreachable: 'Could not reach the server.',
     request_failed: 'Request failed.',
-    footnote: 'MP3 · M4A · Opus · Original — no account, no playlist, no ads.',
   },
 };
 

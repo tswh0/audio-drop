@@ -168,14 +168,6 @@ article.card button:not(.outline):disabled {
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
 }
-.foot {
-  margin: 1.4rem 0 0;
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: .7rem;
-  letter-spacing: .01em;
-  text-wrap: pretty;
-}
 @keyframes arrive {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
