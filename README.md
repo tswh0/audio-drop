@@ -32,7 +32,8 @@ LANGUAGE=en EXPERT_MODE=true docker compose up -d
 
 - `LANGUAGE` — `en` (default in the published compose) or `de`; the dev compose defaults to `de`.
 - `EXPERT_MODE` — `true` shows the quality selector and lets you edit title, artist and album before download.
-- `TRUSTED_PROXY` — peer allowed to supply `X-Forwarded-For`; defaults to `*`. Set it to your reverse proxy IP to prevent log spoofing.
+- `TRUSTED_PROXY` — peer allowed to supply `X-Forwarded-For`; defaults to `*` in `serve.py`, and the published compose pins it to the Caddy host `192.168.6.134`.
+- Firewall 8090 on the Docker host so only the Caddy host can reach it; the app has no auth of its own.
 
 ## Cookies
 
@@ -59,3 +60,7 @@ Cookies are login credentials: keep the file private and out of git. They expire
 - Every served download logs one line to the container log: id, IP, format, quality, bytes, title, artist, URL.
 - yt-dlp is pinned; Renovate opens a PR for new releases. Rebuild after merging.
 - `MAX_DURATION` (seconds, default 10800), `MAX_CONCURRENT` and `MAX_JOBS` are environment knobs.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
